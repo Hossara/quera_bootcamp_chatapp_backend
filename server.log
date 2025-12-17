@@ -1,0 +1,28 @@
+2025/12/17 18:36:49 Starting server on 0.0.0.0:3000
+
+    _______ __
+   / ____(_) /_  ___  _____
+  / /_  / / __ \/ _ \/ ___/
+ / __/ / / /_/ /  __/ /
+/_/   /_/_.___/\___/_/          v3.0.0-rc.3
+--------------------------------------------------
+INFO Server started on: 	http://127.0.0.1:3000 (bound on host 0.0.0.0 and port 3000)
+INFO Application name: 		Chat App Backend
+INFO Total handlers: 		41
+INFO Prefork: 			Disabled
+INFO PID: 			8535
+INFO Total process count: 	1
+
+2025-12-17 18:36:58 | 200 |      42.299µs | GET /health
+2025-12-17 18:37:05 | 201 |   69.520335ms | POST /api/v1/auth/register
+2025-12-17 18:37:14 | 201 |     68.8316ms | POST /api/v1/auth/register
+2025-12-17 18:37:14 | 200 |     933.182µs | GET /api/v1/auth/me
+2025-12-17 18:37:24 | 200 |   67.794937ms | POST /api/v1/auth/login
+2025-12-17 18:37:24 | 201 |    3.294863ms | POST /api/v1/chats
+2025-12-17 18:37:33 | 200 |   67.807241ms | POST /api/v1/auth/login
+2025-12-17 18:37:33 | 201 |    2.535734ms | POST /api/v1/messages
+2025-12-17 18:37:42 | 200 |   67.699755ms | POST /api/v1/auth/login
+2025-12-17 18:37:42 | 200 |    3.072454ms | GET /api/v1/messages/chat/1
+2025-12-17 18:37:50 | 200 |   67.879249ms | POST /api/v1/auth/login
+2025-12-17 18:37:50 | 200 |     808.833µs | GET /api/v1/users
+2025-12-17 18:37:58 | 200 |        31.9µs | GET /ws/health
