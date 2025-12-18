@@ -8,19 +8,19 @@ import (
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/auth"
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/model"
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent"
-	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent/user"
+	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/service"
 	f "github.com/Hossara/quera_bootcamp_chatapp_backend/pkg/fiber"
 	"github.com/gofiber/fiber/v3"
 )
 
 type AuthHandler struct {
-	client      *ent.Client
+	userService *service.UserService
 	authService *auth.Service
 }
 
 func NewAuthHandler(client *ent.Client, authService *auth.Service) *AuthHandler {
 	return &AuthHandler{
-		client:      client,
+		userService: service.NewUserService(client, authService),
 		authService: authService,
 	}
 }
@@ -47,9 +47,7 @@ func (h *AuthHandler) Register(c fiber.Ctx) error {
 	}
 
 	// Check if user exists
-	exists, err := h.client.User.Query().
-		Where(user.Username(req.Username)).
-		Exist(context.Background())
+	exists, err := h.userService.UserExists(context.Background(), req.Username)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(model.ErrorResponse{
 			Error: "failed to check user existence",
@@ -61,25 +59,8 @@ func (h *AuthHandler) Register(c fiber.Ctx) error {
 		})
 	}
 
-	// Hash password
-	hashedPassword, err := h.authService.HashPassword(req.Password)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(model.ErrorResponse{
-			Error: "failed to process password",
-		})
-	}
-
 	// Create user
-	displayName := req.DisplayName
-	if displayName == "" {
-		displayName = req.Username
-	}
-
-	newUser, err := h.client.User.Create().
-		SetUsername(req.Username).
-		SetPassword(hashedPassword).
-		SetDisplayName(displayName).
-		Save(context.Background())
+	newUser, err := h.userService.CreateUser(context.Background(), req.Username, req.Password, req.DisplayName)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(model.ErrorResponse{
 			Error: "failed to create user",
@@ -87,7 +68,7 @@ func (h *AuthHandler) Register(c fiber.Ctx) error {
 	}
 
 	// Generate token
-	token, err := h.authService.CreateToken(newUser.ID, newUser.Username)
+	token, err := h.userService.CreateToken(newUser.ID, newUser.Username)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(model.ErrorResponse{
 			Error: "failed to generate token",
@@ -113,29 +94,22 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	}
 
 	// Find user
-	u, err := h.client.User.Query().
-		Where(user.Username(req.Username)).
-		Only(context.Background())
+	u, err := h.userService.GetUserByUsername(context.Background(), req.Username)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return c.Status(fiber.StatusUnauthorized).JSON(model.ErrorResponse{
-				Error: "invalid credentials",
-			})
-		}
-		return c.Status(fiber.StatusInternalServerError).JSON(model.ErrorResponse{
-			Error: "failed to find user",
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ErrorResponse{
+			Error: "invalid credentials",
 		})
 	}
 
 	// Verify password
-	if err := h.authService.VerifyPassword(u.Password, req.Password); err != nil {
+	if err := h.userService.VerifyPassword(u.Password, req.Password); err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(model.ErrorResponse{
 			Error: "invalid credentials",
 		})
 	}
 
 	// Generate token
-	token, err := h.authService.CreateToken(u.ID, u.Username)
+	token, err := h.userService.CreateToken(u.ID, u.Username)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(model.ErrorResponse{
 			Error: "failed to generate token",
@@ -157,15 +131,10 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 func (h *AuthHandler) GetMe(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(int)
 
-	u, err := h.client.User.Get(context.Background(), userID)
+	u, err := h.userService.GetUserByID(context.Background(), userID)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return c.Status(fiber.StatusNotFound).JSON(model.ErrorResponse{
-				Error: "user not found",
-			})
-		}
-		return c.Status(fiber.StatusInternalServerError).JSON(model.ErrorResponse{
-			Error: "failed to get user",
+		return c.Status(fiber.StatusNotFound).JSON(model.ErrorResponse{
+			Error: "user not found",
 		})
 	}
 
