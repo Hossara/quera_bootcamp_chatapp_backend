@@ -10,30 +10,32 @@ import (
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/auth"
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/model"
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent"
-	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent/chat"
-	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent/chatmember"
-	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent/user"
+	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/service"
 	"github.com/fasthttp/websocket"
 	"github.com/gofiber/fiber/v3"
 	"github.com/valyala/fasthttp"
 )
 
 type WebSocketHandler struct {
-	client      *ent.Client
-	authService *auth.Service
-	clients     map[int]*websocket.Conn // userID -> connection
-	clientsMu   sync.RWMutex
-	chatRooms   map[int]map[int]bool // chatID -> map[userID]bool
-	roomsMu     sync.RWMutex
-	upgrader    websocket.FastHTTPUpgrader
+	authService    *auth.Service
+	userService    *service.UserService
+	chatService    *service.ChatService
+	messageService *service.MessageService
+	clients        map[int]*websocket.Conn // userID -> connection
+	clientsMu      sync.RWMutex
+	chatRooms      map[int]map[int]bool // chatID -> map[userID]bool
+	roomsMu        sync.RWMutex
+	upgrader       websocket.FastHTTPUpgrader
 }
 
 func NewWebSocketHandler(client *ent.Client, authService *auth.Service) *WebSocketHandler {
 	return &WebSocketHandler{
-		client:      client,
-		authService: authService,
-		clients:     make(map[int]*websocket.Conn),
-		chatRooms:   make(map[int]map[int]bool),
+		authService:    authService,
+		userService:    service.NewUserService(client, authService),
+		chatService:    service.NewChatService(client),
+		messageService: service.NewMessageService(client),
+		clients:        make(map[int]*websocket.Conn),
+		chatRooms:      make(map[int]map[int]bool),
 		upgrader: websocket.FastHTTPUpgrader{
 			CheckOrigin: func(ctx *fasthttp.RequestCtx) bool {
 				return true // Allow all origins in development
@@ -141,23 +143,14 @@ func (h *WebSocketHandler) handleChatMessage(userID int, username string, payloa
 	}
 
 	// Check if user is a member of the chat
-	isMember, err := h.client.ChatMember.Query().
-		Where(
-			chatmember.HasChatWith(chat.ID(msgReq.ChatID)),
-			chatmember.HasUserWith(user.ID(userID)),
-		).
-		Exist(context.Background())
+	isMember, err := h.chatService.IsUserMemberOfChat(context.Background(), msgReq.ChatID, userID)
 	if err != nil || !isMember {
 		log.Printf("User %d is not a member of chat %d", userID, msgReq.ChatID)
 		return
 	}
 
 	// Create message in database
-	msg, err := h.client.Message.Create().
-		SetContent(msgReq.Content).
-		SetSenderID(userID).
-		SetChatID(msgReq.ChatID).
-		Save(context.Background())
+	msg, err := h.messageService.SendMessage(context.Background(), msgReq.ChatID, userID, msgReq.Content)
 	if err != nil {
 		log.Printf("Error creating message: %v", err)
 		return
@@ -194,12 +187,7 @@ func (h *WebSocketHandler) handleJoinChat(userID int, payload interface{}) {
 	}
 
 	// Verify user is a member of the chat
-	isMember, err := h.client.ChatMember.Query().
-		Where(
-			chatmember.HasChatWith(chat.ID(req.ChatID)),
-			chatmember.HasUserWith(user.ID(userID)),
-		).
-		Exist(context.Background())
+	isMember, err := h.chatService.IsUserMemberOfChat(context.Background(), req.ChatID, userID)
 	if err != nil || !isMember {
 		return
 	}
@@ -249,18 +237,15 @@ func (h *WebSocketHandler) broadcastToChat(chatID int, message model.WSMessage) 
 
 	if members == nil {
 		// If no one is in the room, get all members from database
-		memberships, err := h.client.ChatMember.Query().
-			Where(chatmember.HasChatWith(chat.ID(chatID))).
-			All(context.Background())
+		chatEntity, err := h.chatService.GetChatByID(context.Background(), chatID)
 		if err != nil {
 			log.Printf("Error getting chat members: %v", err)
 			return
 		}
 
-		for _, membership := range memberships {
-			sender, _ := membership.QueryUser().Only(context.Background())
-			if sender != nil {
-				h.sendToUser(sender.ID, message)
+		for _, membership := range chatEntity.Edges.Members {
+			if membership.Edges.User != nil {
+				h.sendToUser(membership.Edges.User.ID, message)
 			}
 		}
 		return
