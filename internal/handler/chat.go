@@ -8,6 +8,7 @@ import (
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent/chat"
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent/chatmember"
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent/user"
+	f "github.com/Hossara/quera_bootcamp_chatapp_backend/pkg/fiber"
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/pkg/utils"
 	"github.com/gofiber/fiber/v3"
 )
@@ -23,11 +24,9 @@ func NewChatHandler(client *ent.Client) *ChatHandler {
 func (h *ChatHandler) CreateChat(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(int)
 
-	var req model.CreateChatRequest
-	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(model.ErrorResponse{
-			Error: "invalid request body",
-		})
+	req := new(model.CreateChatRequest)
+	if err := f.ParseRequestBody(c, req); err != nil {
+		return f.RespondError(c, fiber.StatusBadRequest, err.Message, err.Errors)
 	}
 
 	if len(req.MemberIDs) == 0 {
@@ -235,13 +234,9 @@ func (h *ChatHandler) UpdateChat(c fiber.Ctx) error {
 		})
 	}
 
-	var req struct {
-		Name string `json:"name"`
-	}
-	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(model.ErrorResponse{
-			Error: "invalid request body",
-		})
+	req := new(model.UpdateChatRequest)
+	if err := f.ParseRequestBody(c, req); err != nil {
+		return f.RespondError(c, fiber.StatusBadRequest, err.Message, err.Errors)
 	}
 
 	chatEntity, err := h.client.Chat.UpdateOneID(chatID).
@@ -346,11 +341,9 @@ func (h *ChatHandler) AddMembers(c fiber.Ctx) error {
 		})
 	}
 
-	var req model.AddMembersRequest
-	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(model.ErrorResponse{
-			Error: "invalid request body",
-		})
+	req := new(model.AddMembersRequest)
+	if err := f.ParseRequestBody(c, req); err != nil {
+		return f.RespondError(c, fiber.StatusBadRequest, err.Message, err.Errors)
 	}
 
 	// Add members

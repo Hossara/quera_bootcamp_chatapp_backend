@@ -40,6 +40,10 @@ type CreateChatRequest struct {
 	MemberIDs []int  `json:"member_ids" form:"member_ids" validate:"required,min=1"`
 }
 
+type UpdateChatRequest struct {
+	Name string `json:"name" form:"name" validate:"required,max=100"`
+}
+
 type ChatResponse struct {
 	ID        int       `json:"id"`
 	Name      string    `json:"name"`

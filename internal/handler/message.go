@@ -9,6 +9,7 @@ import (
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent/chatmember"
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent/message"
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent/user"
+	f "github.com/Hossara/quera_bootcamp_chatapp_backend/pkg/fiber"
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/pkg/utils"
 	"github.com/gofiber/fiber/v3"
 )
@@ -24,11 +25,9 @@ func NewMessageHandler(client *ent.Client) *MessageHandler {
 func (h *MessageHandler) SendMessage(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(int)
 
-	var req model.SendMessageRequest
-	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(model.ErrorResponse{
-			Error: "invalid request body",
-		})
+	req := new(model.SendMessageRequest)
+	if err := f.ParseRequestBody(c, req); err != nil {
+		return f.RespondError(c, fiber.StatusBadRequest, err.Message, err.Errors)
 	}
 
 	// Check if user is a member of the chat
@@ -204,11 +203,9 @@ func (h *MessageHandler) UpdateMessage(c fiber.Ctx) error {
 		})
 	}
 
-	var req model.UpdateMessageRequest
-	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(model.ErrorResponse{
-			Error: "invalid request body",
-		})
+	req := new(model.UpdateMessageRequest)
+	if err := f.ParseRequestBody(c, req); err != nil {
+		return f.RespondError(c, fiber.StatusBadRequest, err.Message, err.Errors)
 	}
 
 	// Get message

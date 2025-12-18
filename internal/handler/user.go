@@ -8,6 +8,7 @@ import (
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/model"
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent"
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/internal/repository/ent/user"
+	f "github.com/Hossara/quera_bootcamp_chatapp_backend/pkg/fiber"
 	"github.com/Hossara/quera_bootcamp_chatapp_backend/pkg/utils"
 	"github.com/gofiber/fiber/v3"
 )
@@ -93,11 +94,9 @@ func (h *UserHandler) UpdateUser(c fiber.Ctx) error {
 		})
 	}
 
-	var req model.UpdateUserRequest
-	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(model.ErrorResponse{
-			Error: "invalid request body",
-		})
+	req := new(model.UpdateUserRequest)
+	if err := f.ParseRequestBody(c, req); err != nil {
+		return f.RespondError(c, fiber.StatusBadRequest, err.Message, err.Errors)
 	}
 
 	update := h.client.User.UpdateOneID(id)
