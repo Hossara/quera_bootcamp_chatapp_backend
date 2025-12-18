@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   postgres:
-    image: postgres:15-alpine
-    container_name: chatapp_postgres
+    image: postgres:18-alpine
+    container_name: quera-chatapp-postgres
     environment:
       POSTGRES_USER: chatapp
       POSTGRES_PASSWORD: chatapp123
