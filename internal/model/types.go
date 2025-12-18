@@ -4,14 +4,14 @@ import "time"
 
 // Auth models
 type LoginRequest struct {
-	Username string `json:"username" validate:"required"`
-	Password string `json:"password" validate:"required"`
+	Username string `json:"username" form:"username" validate:"required"`
+	Password string `json:"password" form:"password" validate:"required"`
 }
 
 type RegisterRequest struct {
-	Username    string `json:"username" validate:"required,min=3,max=50"`
-	Password    string `json:"password" validate:"required,min=6"`
-	DisplayName string `json:"display_name,omitempty"`
+	Username    string `json:"username" form:"username" validate:"required,min=3,max=50"`
+	Password    string `json:"password" form:"password" validate:"required,min=6"`
+	DisplayName string `json:"display_name,omitempty" form:"display_name"`
 }
 
 type AuthResponse struct {
@@ -29,15 +29,15 @@ type UserProfile struct {
 }
 
 type UpdateUserRequest struct {
-	DisplayName string `json:"display_name,omitempty"`
-	Password    string `json:"password,omitempty"`
+	DisplayName string `json:"display_name,omitempty" form:"display_name"`
+	Password    string `json:"password,omitempty" form:"password"`
 }
 
 // Chat models
 type CreateChatRequest struct {
-	Name      string `json:"name" validate:"required,max=100"`
-	IsGroup   bool   `json:"is_group"`
-	MemberIDs []int  `json:"member_ids" validate:"required,min=1"`
+	Name      string `json:"name" form:"name" validate:"required,max=100"`
+	IsGroup   bool   `json:"is_group" form:"is_group"`
+	MemberIDs []int  `json:"member_ids" form:"member_ids" validate:"required,min=1"`
 }
 
 type ChatResponse struct {
@@ -62,13 +62,13 @@ type ChatMemberResponse struct {
 }
 
 type AddMembersRequest struct {
-	MemberIDs []int `json:"member_ids" validate:"required,min=1"`
+	MemberIDs []int `json:"member_ids" form:"member_ids" validate:"required,min=1"`
 }
 
 // Message models
 type SendMessageRequest struct {
-	Content string `json:"content" validate:"required"`
-	ChatID  int    `json:"chat_id" validate:"required"`
+	Content string `json:"content" form:"content" validate:"required"`
+	ChatID  int    `json:"chat_id" form:"chat_id" validate:"required"`
 }
 
 type MessageResponse struct {
@@ -82,7 +82,7 @@ type MessageResponse struct {
 }
 
 type UpdateMessageRequest struct {
-	Content string `json:"content" validate:"required"`
+	Content string `json:"content" form:"content" validate:"required"`
 }
 
 // WebSocket models
